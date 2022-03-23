@@ -19,7 +19,7 @@ class Transformer(nn.Module):
         # x -> (batch_size, seq_length)
         x = self.embeddings(x)
         # x -> (batch_size, seq_length, embedding_dim)
-        for transformer_layer in self.transormer_layers:
+        for transformer_layer in self.transformer_layers:
             x = transformer_layer(x)
         # x -> (batch_size, seq_length, embedding_dim)
 
