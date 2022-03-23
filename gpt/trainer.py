@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from labml import monit
+from labml import tracker, experiment, logger
 
 from data_loader.dataset import TextDataset
 from gpt import CONFIGS
@@ -15,6 +16,9 @@ NUM_EPOCHS = CONFIGS['num_epochs']
 SEQ_LENGTH = CONFIGS['seq_length']
 LEARNING_RATE = CONFIGS['learning_rate']
 SHUFFLE_TRAIN_DATA = CONFIGS['shuffle_train_data']
+SEED = CONFIGS['seed']
+
+TRAIN_LOG_INTERVAL = CONFIGS['train_log_interval']
 
 train_data_loader = DataLoader(TextDataset(), batch_size=BATCH_SIZE, shuffle=SHUFFLE_TRAIN_DATA)
 model = Transformer().to(DEVICE)
@@ -22,18 +26,40 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 
 def train():
-    for epoch in monit.loop(NUM_EPOCHS):
-        for train_data in monit.iterate('train', train_data_loader):
-            train_data = train_data.to(DEVICE)
+    for batch_idx, train_data in monit.enum('train', train_data_loader):
+        train_data = train_data.to(DEVICE)
 
-            if train_data.size()[0] < 64:  # remove this
-                continue
+        if train_data.size()[0] < 64:  # remove this
+            continue
 
-            optimizer.zero_grad()
-            out = model(train_data[:, :-1])
-            out = out.to(DEVICE)
+        optimizer.zero_grad()
+        out = model(train_data[:, :-1])
+        out = out.to(DEVICE)
 
-            loss = F.cross_entropy(out.view(BATCH_SIZE * SEQ_LENGTH, 65),
-                                   train_data[:, 1:].reshape(BATCH_SIZE * SEQ_LENGTH))
-            loss.backward()
-            optimizer.step()
+        loss = F.cross_entropy(out.view(BATCH_SIZE * SEQ_LENGTH, 65),
+                               train_data[:, 1:].reshape(BATCH_SIZE * SEQ_LENGTH))
+        loss.backward()
+        optimizer.step()
+
+        tracker.add_global_step()
+        tracker.add({'loss.train': loss})
+
+        if batch_idx % TRAIN_LOG_INTERVAL == 0:
+            tracker.save()
+
+
+def main():
+    torch.manual_seed(SEED)
+
+    experiment.create(name='gpt')
+    experiment.configs(CONFIGS)
+    experiment.add_pytorch_models(dict(model=model))
+
+    with experiment.start():
+        for epoch in range(1, NUM_EPOCHS + 1):
+            train()
+            logger.log()
+
+
+if __name__ == '__main__':
+    main()

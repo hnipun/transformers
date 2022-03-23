@@ -9,4 +9,6 @@ CONFIGS = dict(
     num_epochs=100,
     learning_rate=3e-4,
     shuffle_train_data=True,
+    train_log_interval=10,
+    seed=5,
 )
