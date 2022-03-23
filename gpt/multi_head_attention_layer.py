@@ -1,4 +1,14 @@
+import torch
 import torch.nn as nn
+
+from gpt import CONFIGS
+
+BATCH_SIZE = CONFIGS['batch_size']
+NUM_EMBEDDINGS = CONFIGS['num_embeddings']
+EMBEDDING_DIM = CONFIGS['embedding_dim']
+N_TRANSFORMER_LAYERS = CONFIGS['n_transformer_layers']
+NUM_ATTENTION_HEADS = CONFIGS['num_attention_heads']
+NUM_ATTENTION_FEATURES = CONFIGS['num_attention_features']
 
 
 class MultiHeadAttentionLayer(nn.Module):
@@ -7,47 +17,49 @@ class MultiHeadAttentionLayer(nn.Module):
 
         self.norm_layer = nn.LayerNorm(EMBEDDING_DIM)
 
-        self.key_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_FEATURES)
-        self.query_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_FEATURES)
-        self.value_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_FEATURES)
+        self.key_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
+        self.query_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
+        self.value_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
 
         self.softmax = nn.Softmax(dim=2)
-        self.linear_layer = nn.Linear(NUM_ATTENTION_HEADS * NUM_FEATURES, EMBEDDING_DIM)
+        self.linear_layer = nn.Linear(NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES, EMBEDDING_DIM)
 
     def forward(self, x):
-        x_residual = x
-        x = self.norm_layer(x)
         seq_length = x.shape[1]
-        kx = self.key_linear(x)
-        # logger.log(f'kx layer {kx.size()}')
-        kx = kx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_FEATURES)
-        # logger.log(f'kx layer {kx.size()}')
 
-        qx = self.query_linear(x)
-        qx = kx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_FEATURES)
+        x_norm = self.norm_layer(x)  # pre-norm layer
 
-        vx = self.value_linear(x)
-        vx = kx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_FEATURES)
+        kx = self.key_linear(x_norm)
+        kx = kx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_ATTENTION_FEATURES)
+
+        qx = self.query_linear(x_norm)
+        qx = qx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_ATTENTION_FEATURES)
+
+        vx = self.value_linear(x_norm)
+        vx = vx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_ATTENTION_FEATURES)
 
         score = torch.einsum('bihd,bjhd ->bijh', qx, kx)
-        score = score / (NUM_FEATURES) ** 0.5
+        score = score / (NUM_ATTENTION_FEATURES ** 0.5)
 
-        # logger.log(f'score layer {score.size()}')
-
-        mask = get_mask(seq_length).to(x.device)
+        mask = self._get_mask(seq_length).to(x.device)
         score = score.masked_fill(mask, float("-inf"))
 
         probs = self.softmax(score)
 
-        # logger.log(f'probs layer {probs.size()}')
-
         output = torch.einsum('bijh,bjhd ->bihd', probs, vx)
-        # logger.log(f'output layer {output.size()}')
-        output = output.reshape(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS * NUM_FEATURES)
-        # logger.log(f'output layer {output.size()}')
+        output = output.reshape(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
         output = self.linear_layer(output)
-        # logger.log(f'output layer {output.size()}')
 
-        # logger.log(f'kx layer {kx.size()}')
+        return output + x  # x +  x
 
-        return x + x_residual
+    @staticmethod
+    def _get_mask(seq_length: int):  # should be batch_size, seq_length, seq_length, heads
+        # 1, seq_length, seq_length, 1 is enough
+
+        res = torch.ones(seq_length, seq_length, dtype=bool)
+        res = torch.triu(res, diagonal=1)
+
+        res = torch.unsqueeze(res, 0)
+        res = torch.unsqueeze(res, -1)
+
+        return res

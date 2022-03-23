@@ -21,6 +21,6 @@ class Transformer(nn.Module):
         # x -> (batch_size, seq_length, embedding_dim)
         for transformer_layer in self.transormer_layers:
             x = transformer_layer(x)
-        # x -> (batch_size, seq_length, emd_dim)
+        # x -> (batch_size, seq_length, embedding_dim)
 
         return self.readout_layer(x)  # -> (batch_size, seq_length, num_embeddings)
