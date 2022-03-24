@@ -1,22 +1,28 @@
 import torch.nn as nn
 
+from gpt import CONFIGS
+
+BATCH_SIZE = CONFIGS['batch_size']
+EMBEDDING_DIM = CONFIGS['embedding_dim']
+SEQ_LENGTH = CONFIGS['seq_length']
+
 
 class FeedForwardLayer(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # self.norm_layer = nn.LayerNorm(EMBEDDING_DIM)
-        # self.linear_layer1 = nn.Linear(BATCH_SIZE, SEQ_LENGTH, EMBEDDING_DIM / 2)
-        # self.activation_layer = nn.ReLU()
-        # self.linear_layer2 = nn.Linear(BATCH_SIZE, SEQ_LENGTH, EMBEDDING_DIM)
+        hidden_size = EMBEDDING_DIM // 2
+
+        self.norm_layer = nn.LayerNorm(EMBEDDING_DIM)
+        self.linear_layer1 = nn.Linear(EMBEDDING_DIM, hidden_size)
+        self.activation_layer = nn.ReLU()
+        self.linear_layer2 = nn.Linear(hidden_size, EMBEDDING_DIM)
 
     def forward(self, x):
-        # x_residual = x
-        #
-        # x = self.norm_layer(x)
-        # x = self.linear_layer1(x)
-        # x = self.activation_layer(x)
-        # x = self.linear_layer2(x)
-        #
-        # return x + x_residual
-        return x
+        x_norm = self.norm_layer(x)
+
+        output = self.linear_layer1(x_norm)
+        output = self.activation_layer(output)
+        output = self.linear_layer2(output)
+
+        return output + x  # x or x_norm ?

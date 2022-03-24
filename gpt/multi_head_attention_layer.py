@@ -59,7 +59,7 @@ class MultiHeadAttentionLayer(nn.Module):
         output = self.linear_layer(output)
         # output -> (batch_size, seq_length, embedding_dim)
 
-        return output + x
+        return output + x  # x or x_norm ?
 
     @staticmethod
     def _get_mask(seq_length: int):  # should be batch_size, seq_length, seq_length, num_attention_heads
