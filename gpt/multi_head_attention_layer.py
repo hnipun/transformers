@@ -50,7 +50,7 @@ class MultiHeadAttentionLayer(nn.Module):
         output = output.reshape(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
         output = self.linear_layer(output)
 
-        return output + x  # x +  x
+        return output + x
 
     @staticmethod
     def _get_mask(seq_length: int):  # should be batch_size, seq_length, seq_length, heads

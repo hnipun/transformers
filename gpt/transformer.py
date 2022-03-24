@@ -11,6 +11,7 @@ N_TRANSFORMER_LAYERS = CONFIGS['n_transformer_layers']
 class Transformer(nn.Module):
     def __init__(self):
         super().__init__()
+
         self.embeddings = nn.Embedding(NUM_EMBEDDINGS, EMBEDDING_DIM)
         self.transformer_layers = nn.ModuleList([TransformerLayer()] * N_TRANSFORMER_LAYERS)
         self.readout_layer = nn.Linear(EMBEDDING_DIM, NUM_EMBEDDINGS)

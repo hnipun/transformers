@@ -11,7 +11,9 @@ class TransformerLayer(nn.Module):
         self.multi_head_attention_layer = MultiHeadAttentionLayer()
         self.feed_forward_layer = FeedForwardLayer()
 
-    def forward(self, x):  # (batch_size, seq_length, embedding_dim)
+    def forward(self, x):
+        # x -> (batch_size, seq_length, embedding_dim)
         x = self.multi_head_attention_layer(x)
+        # x -> (batch_size, seq_length, embedding_dim)
 
         return self.feed_forward_layer(x)
