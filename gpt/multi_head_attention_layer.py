@@ -21,7 +21,7 @@ class MultiHeadAttentionLayer(nn.Module):
         self.query_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
         self.value_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
 
-        self.softmax = nn.Softmax(dim=2)
+        self.softmax = nn.Softmax(dim=1)  # dim should be 1
         self.linear_layer = nn.Linear(NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES, EMBEDDING_DIM)
 
     def forward(self, x):
