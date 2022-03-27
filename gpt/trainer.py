@@ -26,7 +26,9 @@ NUM_EPOCHS = CONFIGS['num_epochs']
 LEARNING_RATE = CONFIGS['learning_rate']
 TRAIN_LOG_INTERVAL = CONFIGS['train_log_interval']
 
-train_data_loader = DataLoader(TextDataset(), batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+train_data_loader = DataLoader(TextDataset(is_train=True), batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+test_data_loader = DataLoader(TextDataset(is_train=False), batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+
 model = Transformer(num_embeddings=NUM_EMBEDDINGS,
                     embedding_dim=EMBEDDING_DIM,
                     n_transformer_layers=N_TRANSFORMER_LAYERS,
@@ -37,6 +39,7 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 
 def train():
+    model.train()
     for batch_idx, train_data in monit.enum('train', train_data_loader):
         train_data = train_data.to(DEVICE)
 
@@ -56,6 +59,20 @@ def train():
             tracker.save()
 
 
+def test():
+    model.eval()
+    valid_loss = 0
+    for test_data in monit.iterate('test', test_data_loader):
+        test_data = test_data.to(DEVICE)
+
+        with torch.no_grad():
+            out = model(test_data[:, :-1])
+            valid_loss += F.cross_entropy(out.view(BATCH_SIZE * SEQ_LENGTH, NUM_EMBEDDINGS),
+                                          test_data[:, 1:].reshape(BATCH_SIZE * SEQ_LENGTH)).item()
+
+    tracker.save({'loss.valid': valid_loss})
+
+
 def main():
     torch.manual_seed(SEED)
 
@@ -66,6 +83,7 @@ def main():
     with experiment.start():
         for epoch in range(1, NUM_EPOCHS + 1):
             train()
+            test()
             logger.log()
 
 

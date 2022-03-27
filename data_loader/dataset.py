@@ -3,12 +3,14 @@ from torch.utils.data import Dataset
 import labml.utils.download
 from labml import lab
 
+TEST_SIZE = 10
 SEQ_LENGTH = 128
 
 
 class TextDataset(Dataset):
-    def __init__(self, seq_length: int = SEQ_LENGTH):
+    def __init__(self, seq_length: int = SEQ_LENGTH, is_train: bool = True):
         self.seq_length = seq_length
+        self.is_train = is_train
 
         labml.utils.download.download_file(
             'https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt',
@@ -17,7 +19,11 @@ class TextDataset(Dataset):
         with open(lab.get_data_path() / 'tiny_shakespeare.txt', "r") as f:
             self.text = f.read()
 
-        self.text = list(self.text)
+        if not self.is_train:
+            self.text = list(self.text)[:seq_length * TEST_SIZE]
+        else:
+            self.text = list(self.text)[seq_length * TEST_SIZE:]
+
         self.vocab = {t: ids for ids, t in enumerate(set(self.text))}
         self.text_tensor = torch.tensor(self._to_vocab(self.text))
 
