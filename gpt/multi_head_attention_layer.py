@@ -1,25 +1,23 @@
 import torch
 import torch.nn as nn
 
-from gpt import CONFIGS
-
-EMBEDDING_DIM = CONFIGS['embedding_dim']
-NUM_ATTENTION_HEADS = CONFIGS['num_attention_heads']
-NUM_WEIGHTS = CONFIGS['num_weights']
-
 
 class MultiHeadAttentionLayer(nn.Module):
-    def __init__(self):
+    def __init__(self, embedding_dim: int, num_attention_heads: int, num_weights: int):
         super().__init__()
 
-        self.norm_layer = nn.LayerNorm(EMBEDDING_DIM)
+        self.embedding_dim = embedding_dim
+        self.num_attention_heads = num_attention_heads
+        self.num_weights = num_weights
 
-        self.key_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_WEIGHTS)
-        self.query_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_WEIGHTS)
-        self.value_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_WEIGHTS)
+        self.norm_layer = nn.LayerNorm(self.embedding_dim)
+
+        self.key_linear = nn.Linear(self.embedding_dim, self.num_attention_heads * num_weights)
+        self.query_linear = nn.Linear(self.embedding_dim, self.num_attention_heads * num_weights)
+        self.value_linear = nn.Linear(self.embedding_dim, self.num_attention_heads * num_weights)
 
         self.softmax = nn.Softmax(dim=2)  # dim should be 1 ?
-        self.linear_layer = nn.Linear(NUM_ATTENTION_HEADS * NUM_WEIGHTS, EMBEDDING_DIM)
+        self.linear_layer = nn.Linear(self.num_attention_heads * num_weights, self.embedding_dim)
 
     def forward(self, x):
         batch_size, seq_length = x.shape[0], x.shape[1]
@@ -28,18 +26,18 @@ class MultiHeadAttentionLayer(nn.Module):
         # x_norm -> (batch_size, seq_length, embedding_dim)
         kx = self.key_linear(x_norm)
         # kx -> (batch_size, seq_length, num_attention_heads * num_attention_features)
-        kx = kx.view(batch_size, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
+        kx = kx.view(batch_size, seq_length, self.num_attention_heads, self.num_weights)
         # kx -> (batch_size, seq_length, num_attention_heads, num_attention_features)
 
         qx = self.query_linear(x_norm)
-        qx = qx.view(batch_size, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
+        qx = qx.view(batch_size, seq_length, self.num_attention_heads, self.num_weights)
 
         vx = self.value_linear(x_norm)
-        vx = vx.view(batch_size, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
+        vx = vx.view(batch_size, seq_length, self.num_attention_heads, self.num_weights)
 
         score = torch.einsum('bihd,bjhd ->bijh', qx, kx)
         # score -> (batch_size, seq_length, seq_length, num_attention_heads)
-        score = score / (NUM_WEIGHTS ** 0.5)
+        score = score / (self.num_weights ** 0.5)  # reduce the variance, thus less spikes in probs, better gradients
 
         mask = self._get_mask(seq_length).to(x.device)
         # mask -> (1, seq_length, seq_length, 1)
@@ -51,7 +49,7 @@ class MultiHeadAttentionLayer(nn.Module):
 
         output = torch.einsum('bijh,bjhd ->bihd', probs, vx)
         # output -> (batch_size, seq_length, num_attention_heads, num_attention_features)
-        output = output.reshape(batch_size, seq_length, NUM_ATTENTION_HEADS * NUM_WEIGHTS)  # concat
+        output = output.reshape(batch_size, seq_length, self.num_attention_heads * self.num_weights)  # concat
         # output -> (batch_size, seq_length, num_attention_heads * num_attention_features)
         output = self.linear_layer(output)
         # output -> (batch_size, seq_length, embedding_dim)

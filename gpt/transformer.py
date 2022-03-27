@@ -1,20 +1,22 @@
 import torch.nn as nn
 
 from gpt.transformer_layer import TransformerLayer
-from gpt import CONFIGS
-
-NUM_EMBEDDINGS = CONFIGS['num_embeddings']
-EMBEDDING_DIM = CONFIGS['embedding_dim']
-N_TRANSFORMER_LAYERS = CONFIGS['n_transformer_layers']
 
 
 class Transformer(nn.Module):
-    def __init__(self):
+    def __init__(self, num_embeddings: int,
+                 embedding_dim: int,
+                 n_transformer_layers: int,
+                 num_attention_heads: int,
+                 num_weights: int):
         super().__init__()
 
-        self.embeddings = nn.Embedding(NUM_EMBEDDINGS, EMBEDDING_DIM)
-        self.transformer_layers = nn.ModuleList([TransformerLayer()] * N_TRANSFORMER_LAYERS)
-        self.readout_layer = nn.Linear(EMBEDDING_DIM, NUM_EMBEDDINGS)
+        self.embeddings = nn.Embedding(num_embeddings, embedding_dim)
+        self.transformer_layers = nn.ModuleList([TransformerLayer(embedding_dim=embedding_dim,
+                                                                  num_attention_heads=num_attention_heads,
+                                                                  num_weights=num_weights
+                                                                  )] * n_transformer_layers)
+        self.readout_layer = nn.Linear(embedding_dim, num_embeddings)
 
     def forward(self, x):
         # x -> (batch_size, seq_length)

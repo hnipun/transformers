@@ -8,7 +8,6 @@ CONFIGS = dict(
     num_weights=64,
     num_epochs=250,
     learning_rate=3e-4,
-    shuffle_train_data=True,
     train_log_interval=10,
     seed=5,
 )
