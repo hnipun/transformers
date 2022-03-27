@@ -29,7 +29,10 @@ TRAIN_LOG_INTERVAL = CONFIGS['train_log_interval']
 train_data_loader = DataLoader(TextDataset(), batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 model = Transformer(num_embeddings=NUM_EMBEDDINGS,
                     embedding_dim=EMBEDDING_DIM,
-                    n_transformer_layers=N_TRANSFORMER_LAYERS).to(DEVICE)
+                    n_transformer_layers=N_TRANSFORMER_LAYERS,
+                    num_attention_heads=NUM_ATTENTION_HEADS,
+                    num_weights=NUM_WEIGHTS
+                    ).to(DEVICE)
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 
