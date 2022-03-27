@@ -2,9 +2,7 @@ import torch.nn as nn
 
 from gpt import CONFIGS
 
-BATCH_SIZE = CONFIGS['batch_size']
 EMBEDDING_DIM = CONFIGS['embedding_dim']
-SEQ_LENGTH = CONFIGS['seq_length']
 
 
 class FeedForwardLayer(nn.Module):
