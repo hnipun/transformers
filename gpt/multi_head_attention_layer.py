@@ -8,7 +8,7 @@ NUM_EMBEDDINGS = CONFIGS['num_embeddings']
 EMBEDDING_DIM = CONFIGS['embedding_dim']
 N_TRANSFORMER_LAYERS = CONFIGS['n_transformer_layers']
 NUM_ATTENTION_HEADS = CONFIGS['num_attention_heads']
-NUM_ATTENTION_FEATURES = CONFIGS['num_attention_features']
+NUM_WEIGHTS = CONFIGS['num_weights']
 
 
 class MultiHeadAttentionLayer(nn.Module):
@@ -17,12 +17,12 @@ class MultiHeadAttentionLayer(nn.Module):
 
         self.norm_layer = nn.LayerNorm(EMBEDDING_DIM)
 
-        self.key_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
-        self.query_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
-        self.value_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
+        self.key_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_WEIGHTS)
+        self.query_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_WEIGHTS)
+        self.value_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_WEIGHTS)
 
-        self.softmax = nn.Softmax(dim=1)  # dim should be 1
-        self.linear_layer = nn.Linear(NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES, EMBEDDING_DIM)
+        self.softmax = nn.Softmax(dim=2)  # dim should be 1
+        self.linear_layer = nn.Linear(NUM_ATTENTION_HEADS * NUM_WEIGHTS, EMBEDDING_DIM)
 
     def forward(self, x):
         seq_length = x.shape[1]
@@ -31,18 +31,18 @@ class MultiHeadAttentionLayer(nn.Module):
         # x_norm -> (batch_size, seq_length, embedding_dim)
         kx = self.key_linear(x_norm)
         # kx -> (batch_size, seq_length, num_attention_heads * num_attention_features)
-        kx = kx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_ATTENTION_FEATURES)
+        kx = kx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
         # kx -> (batch_size, seq_length, num_attention_heads, num_attention_features)
 
         qx = self.query_linear(x_norm)
-        qx = qx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_ATTENTION_FEATURES)
+        qx = qx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
 
         vx = self.value_linear(x_norm)
-        vx = vx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_ATTENTION_FEATURES)
+        vx = vx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
 
         score = torch.einsum('bihd,bjhd ->bijh', qx, kx)
         # score -> (batch_size, seq_length, seq_length, num_attention_heads)
-        score = score / (NUM_ATTENTION_FEATURES ** 0.5)
+        score = score / (NUM_WEIGHTS ** 0.5)
 
         mask = self._get_mask(seq_length).to(x.device)
         # mask -> (1, seq_length, seq_length, 1)
@@ -54,7 +54,7 @@ class MultiHeadAttentionLayer(nn.Module):
 
         output = torch.einsum('bijh,bjhd ->bihd', probs, vx)
         # output -> (batch_size, seq_length, num_attention_heads, num_attention_features)
-        output = output.reshape(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS * NUM_ATTENTION_FEATURES)
+        output = output.reshape(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS * NUM_WEIGHTS) # concat
         # output -> (batch_size, seq_length, num_attention_heads * num_attention_features)
         output = self.linear_layer(output)
         # output -> (batch_size, seq_length, embedding_dim)

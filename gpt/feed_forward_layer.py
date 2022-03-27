@@ -11,7 +11,7 @@ class FeedForwardLayer(nn.Module):
     def __init__(self):
         super().__init__()
 
-        hidden_size = EMBEDDING_DIM // 2
+        hidden_size = EMBEDDING_DIM * 4
 
         self.norm_layer = nn.LayerNorm(EMBEDDING_DIM)
         self.linear_layer1 = nn.Linear(EMBEDDING_DIM, hidden_size)
