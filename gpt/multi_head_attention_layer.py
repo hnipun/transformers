@@ -3,10 +3,7 @@ import torch.nn as nn
 
 from gpt import CONFIGS
 
-BATCH_SIZE = CONFIGS['batch_size']
-NUM_EMBEDDINGS = CONFIGS['num_embeddings']
 EMBEDDING_DIM = CONFIGS['embedding_dim']
-N_TRANSFORMER_LAYERS = CONFIGS['n_transformer_layers']
 NUM_ATTENTION_HEADS = CONFIGS['num_attention_heads']
 NUM_WEIGHTS = CONFIGS['num_weights']
 
@@ -21,24 +18,24 @@ class MultiHeadAttentionLayer(nn.Module):
         self.query_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_WEIGHTS)
         self.value_linear = nn.Linear(EMBEDDING_DIM, NUM_ATTENTION_HEADS * NUM_WEIGHTS)
 
-        self.softmax = nn.Softmax(dim=2)  # dim should be 1
+        self.softmax = nn.Softmax(dim=2)  # dim should be 1 ?
         self.linear_layer = nn.Linear(NUM_ATTENTION_HEADS * NUM_WEIGHTS, EMBEDDING_DIM)
 
     def forward(self, x):
-        seq_length = x.shape[1]
+        batch_size, seq_length = x.shape[0], x.shape[1]
         # x -> (batch_size, seq_length, embedding_dim)
         x_norm = self.norm_layer(x)  # pre-norm layer
         # x_norm -> (batch_size, seq_length, embedding_dim)
         kx = self.key_linear(x_norm)
         # kx -> (batch_size, seq_length, num_attention_heads * num_attention_features)
-        kx = kx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
+        kx = kx.view(batch_size, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
         # kx -> (batch_size, seq_length, num_attention_heads, num_attention_features)
 
         qx = self.query_linear(x_norm)
-        qx = qx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
+        qx = qx.view(batch_size, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
 
         vx = self.value_linear(x_norm)
-        vx = vx.view(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
+        vx = vx.view(batch_size, seq_length, NUM_ATTENTION_HEADS, NUM_WEIGHTS)
 
         score = torch.einsum('bihd,bjhd ->bijh', qx, kx)
         # score -> (batch_size, seq_length, seq_length, num_attention_heads)
@@ -54,7 +51,7 @@ class MultiHeadAttentionLayer(nn.Module):
 
         output = torch.einsum('bijh,bjhd ->bihd', probs, vx)
         # output -> (batch_size, seq_length, num_attention_heads, num_attention_features)
-        output = output.reshape(BATCH_SIZE, seq_length, NUM_ATTENTION_HEADS * NUM_WEIGHTS) # concat
+        output = output.reshape(batch_size, seq_length, NUM_ATTENTION_HEADS * NUM_WEIGHTS)  # concat
         # output -> (batch_size, seq_length, num_attention_heads * num_attention_features)
         output = self.linear_layer(output)
         # output -> (batch_size, seq_length, embedding_dim)

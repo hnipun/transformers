@@ -14,10 +14,10 @@ DEVICE = torch.device('cuda')
 BATCH_SIZE = CONFIGS['batch_size']
 NUM_EPOCHS = CONFIGS['num_epochs']
 SEQ_LENGTH = CONFIGS['seq_length']
+NUM_EMBEDDINGS = CONFIGS['num_embeddings']
 LEARNING_RATE = CONFIGS['learning_rate']
 SHUFFLE_TRAIN_DATA = CONFIGS['shuffle_train_data']
 SEED = CONFIGS['seed']
-
 TRAIN_LOG_INTERVAL = CONFIGS['train_log_interval']
 
 train_data_loader = DataLoader(TextDataset(), batch_size=BATCH_SIZE, shuffle=SHUFFLE_TRAIN_DATA, drop_last=True)
@@ -33,7 +33,7 @@ def train():
         out = model(train_data[:, :-1])
         out = out.to(DEVICE)
 
-        loss = F.cross_entropy(out.view(BATCH_SIZE * SEQ_LENGTH, 65),
+        loss = F.cross_entropy(out.view(BATCH_SIZE * SEQ_LENGTH, NUM_EMBEDDINGS),
                                train_data[:, 1:].reshape(BATCH_SIZE * SEQ_LENGTH))
         loss.backward()
         optimizer.step()
