@@ -20,7 +20,7 @@ SEED = CONFIGS['seed']
 
 TRAIN_LOG_INTERVAL = CONFIGS['train_log_interval']
 
-train_data_loader = DataLoader(TextDataset(), batch_size=BATCH_SIZE, shuffle=SHUFFLE_TRAIN_DATA)
+train_data_loader = DataLoader(TextDataset(), batch_size=BATCH_SIZE, shuffle=SHUFFLE_TRAIN_DATA, drop_last=True)
 model = Transformer().to(DEVICE)
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
@@ -28,9 +28,6 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 def train():
     for batch_idx, train_data in monit.enum('train', train_data_loader):
         train_data = train_data.to(DEVICE)
-
-        if train_data.size()[0] < 64:  # remove this
-            continue
 
         optimizer.zero_grad()
         out = model(train_data[:, :-1])
